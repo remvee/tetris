@@ -1,0 +1,15 @@
+*.class
+*.jar
+.hg/
+.hgignore
+.repl
+/.lein-*
+/.nrepl-port
+/checkouts
+/classes
+/figwheel_server.log
+/resources/public/js
+/resources/public/js-dev
+/target
+pom.xml
+pom.xml.asc
