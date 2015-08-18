@@ -6,8 +6,7 @@ html, body {
 #container {
     position: relative;
     height: 100%;
-    width: 30em;
-    margin: 0 auto;
+    width: 100%;
 }
 .grid {
     width: 20em;
@@ -50,4 +49,10 @@ html, body {
     font-weight: bold;
     text-align: center;
     text-decoration: none;
+}
+.points {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 150%;
 }

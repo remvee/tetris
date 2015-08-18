@@ -63,15 +63,21 @@
              grid
              (range (count grid))))))
 
+(defn collect-points [grid]
+  (count (filter #(every? (partial not= \ ) %) grid)))
+
 (defn new-block [{:keys [grid] :as world}]
   (let [block (rand-nth (vals blocks))
         x (int (- (/ width 2) (/ (count (first block)) 2)))
-        new-grid (-> world render clear-full)]
+        new-grid (render world)
+        points (collect-points new-grid)
+        new-grid (clear-full new-grid)]
     (if (nil? new-grid)
       (assoc world :game-over? true)
-      (assoc world
-             :grid new-grid
-             :x x, :y 0, :rotations 0, :block block))))
+      (-> world
+          (assoc :grid new-grid
+                 :x x, :y 0, :rotations 0, :block block)
+          (update :points (fnil + 0) points)))))
 
 (defn move [{:keys [game-over?] :as world} direction]
   (let [new (case direction
@@ -105,10 +111,11 @@
 (defonce world-atom (r/atom (new-block {:grid empty-grid})))
 
 (defn main-component []
-  (let [{:keys [game-over? grid] :as world} @world-atom
+  (let [{:keys [game-over? grid points] :as world} @world-atom
         grid (if game-over? grid (or (render world) grid))]
     [:div.main {:class (when game-over? "game-over")}
      (grid-component grid)
+     [:div.points points]
      (when game-over?
        [:a.title {:href "#"
                   :on-click #(reset! world-atom (new-block {:grid empty-grid}))}
