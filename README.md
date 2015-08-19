@@ -4,7 +4,13 @@ Well.. it's tetris..
 
 ## Usage
 
-Play it!
+Build it:
+
+    lein cljsbuild once
+
+Play it:
+
+    open resources/public/index.html
 
 ## License
 
