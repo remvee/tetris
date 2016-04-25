@@ -43,7 +43,7 @@
                       (drop y grid)
                       block)))))
 
-(defn render [{:keys [grid block x y rotations] :as world}]
+(defn render [{:keys [grid block x y rotations] :as world :or {y 0}}]
   (let [block (rotate block rotations)]
     (concat (take y grid)
             (map (fn [grid-line block-line]
@@ -116,12 +116,17 @@
                             (new-block {:grid empty-grid}))}
         "GAME OVER"])]))
 
-(defn ^:export main [el]
-  (let [world-atom (r/atom (new-block {:grid empty-grid}))]
-    (.addEventListener (.-body js/document) "keydown"
-                       (fn [e]
-                         (when-let [direction ({37 :left, 38 :up, 39 :right, 40 :down}
-                                               (.-keyCode e))]
-                           (swap! world-atom move direction))))
-    (js/setInterval #(swap! world-atom move :down) 500)
-    (r/render-component [main-component world-atom] el)))
+(defonce world-atom (r/atom (new-block {:grid empty-grid})))
+
+(defonce key-listener
+  (.addEventListener (.-body js/document) "keydown"
+                     (fn [e]
+                       (when-let [direction ({37 :left, 38 :up, 39 :right, 40 :down}
+                                             (.-keyCode e))]
+                         (swap! world-atom move direction)))))
+
+(defonce interval
+  (js/setInterval #(swap! world-atom move :down) 500))
+
+(r/render-component [main-component world-atom]
+                    (.getElementById js/document "container"))
