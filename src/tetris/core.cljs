@@ -101,13 +101,25 @@
           :class (when-not (= cell \ )
                    (str "taken block-" cell))}])])])
 
+(defn move! [world-atom direction]
+  (swap! world-atom move direction))
+
 (defn main-component [world-atom]
-  (let [{:keys [game-over? grid score] :as world} @world-atom]
+  (let [{:keys [game-over? grid score] :as world} @world-atom
+        button (fn [dir]
+                 (let [f #(do (move! world-atom dir)
+                              (.preventDefault %))]
+                   [:button {:class (name dir), :on-click f, :on-touch-start f} (name dir)]))]
     [:div.main
      {:class (when game-over? "game-over")}
 
      (grid-component (render world))
      [:div.score score]
+     [:div.controls
+      (button :left)
+      (button :right)
+      (button :up)
+      (button :down)]
 
      (when game-over?
        [:a.title
@@ -123,10 +135,10 @@
                      (fn [e]
                        (when-let [direction ({37 :left, 38 :up, 39 :right, 40 :down}
                                              (.-keyCode e))]
-                         (swap! world-atom move direction)))))
+                         (move! world-atom direction)))))
 
 (defonce interval
-  (js/setInterval #(swap! world-atom move :down) 500))
+  (js/setInterval #(move! world-atom :down) 500))
 
 (r/render-component [main-component world-atom]
                     (.getElementById js/document "container"))
