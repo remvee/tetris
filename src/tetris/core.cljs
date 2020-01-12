@@ -114,8 +114,8 @@
     [:div.main
      {:class (when game-over? "game-over")}
 
+     [:div.score (+ score)]
      (grid-component (render world))
-     [:div.score score]
      [:div.controls
       (button :left)
       (button :right)
