@@ -138,14 +138,15 @@
                                              (.-keyCode e))]
                          (move! world-atom direction)))))
 
-(defn tick []
+(defn tick! []
   (move! world-atom :down)
   (let [tick-frequency (- initial-tick-frequency
                           (-> world-atom deref :score (* 10)))]
-    (js/setTimeout tick tick-frequency)))
+    (js/setTimeout tick! tick-frequency)))
 
 (defonce game-loop
-  (tick))
+  (tick!))
 
-(r/render-component [main-component world-atom]
-                    (.getElementById js/document "container"))
+(defn ^:export run []
+  (r/render-component [main-component world-atom]
+                    (.getElementById js/document "container")))

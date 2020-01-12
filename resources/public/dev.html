@@ -12,6 +12,10 @@
     <script src="js-dev/tetris.js" type="text/javascript"></script>
     <script type="text/javascript">
       goog.require('tetris.core');
+      goog.require('tetris.figwheel');
+    </script>
+    <script type="text/javascript">
+      tetris.figwheel.run(tetris.core.run);
     </script>
   </body>
 </html>
