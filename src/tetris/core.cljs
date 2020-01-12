@@ -1,6 +1,7 @@
 (ns tetris.core
   (:require [reagent.core :as r]))
 
+(defonce ^:const initial-tick-frequency 500)
 (defonce ^:const width 10)
 (defonce ^:const height 20)
 
@@ -137,8 +138,14 @@
                                              (.-keyCode e))]
                          (move! world-atom direction)))))
 
-(defonce interval
-  (js/setInterval #(move! world-atom :down) 500))
+(defn tick []
+  (move! world-atom :down)
+  (let [tick-frequency (- initial-tick-frequency
+                          (-> world-atom deref :score (* 10)))]
+    (js/setTimeout tick tick-frequency)))
+
+(defonce game-loop
+  (tick))
 
 (r/render-component [main-component world-atom]
                     (.getElementById js/document "container"))
