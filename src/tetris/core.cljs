@@ -1,9 +1,9 @@
 (ns tetris.core
   (:require [reagent.core :as r]))
 
-(defonce ^:const initial-tick-frequency 500)
-(defonce ^:const width 10)
-(defonce ^:const height 20)
+(defonce initial-tick-frequency 500)
+(defonce width 10)
+(defonce height 20)
 
 (defonce empty-grid
   (vec (take height (repeat (vec (take width (repeat \ )))))))
@@ -69,27 +69,28 @@
           grid))
 
 (defn new-block [world]
-  (let [block (rand-nth blocks)
-        x (int (- (/ width 2) (/ (count (first block)) 2)))
+  (let [block        (rand-nth blocks)
+        x            (int (- (/ width 2) (/ (count (first block)) 2)))
         [score grid] (-> world render score)
-        new (-> world
-                (assoc :grid grid, :x x, :y 0, :rotations 0, :block block)
-                (update :score (fnil + 0) score))]
+        new          (-> world
+                         (assoc :grid grid, :x x, :y 0, :rotations 0, :block block)
+                         (update :score (fnil + 0) score))]
     (if (valid? new)
       new
       (assoc new :game-over? true))))
 
 (defn move [{:keys [game-over?] :as world} direction]
   (let [new (case direction
-              :up (update world :rotations inc)
-              :down (update world :y inc)
-              :left (update world :x dec)
+              :up    (update world :rotations inc)
+              :down  (update world :y inc)
+              :left  (update world :x dec)
               :right (update world :x inc)
               world)]
-    (cond game-over? world
-          (valid? new) new
-          (= direction :down) (new-block world)
-          :else world)))
+    (cond
+      game-over?          world
+      (valid? new)        new
+      (= direction :down) (new-block world)
+      :else               world)))
 
 (defn grid-component [grid]
   [:div.grid
@@ -98,7 +99,7 @@
       {:key (str "line-" y)}
       (for [[x cell] (map vector (iterate inc 0) line)]
         [:div.cell
-         {:key (str "cell-" x)
+         {:key   (str "cell-" x)
           :class (when-not (= cell \ )
                    (str "taken block-" cell))}])])])
 
@@ -106,11 +107,15 @@
   (swap! world-atom move direction))
 
 (defn main-component [world-atom]
-  (let [{:keys [game-over? grid score] :as world} @world-atom
-        button (fn [dir]
-                 (let [f #(do (move! world-atom dir)
-                              (.preventDefault %))]
-                   [:button {:class (name dir), :on-click f, :on-touch-start f} (name dir)]))]
+  (let [{:keys [game-over? grid score]
+         :as   world} @world-atom
+        button        (fn [dir]
+                        (let [f #(do (move! world-atom dir)
+                                     (.preventDefault %))]
+                          [:button {:class (name dir)
+                                    :on-click f
+                                    :on-touch-start f}
+                           (name dir)]))]
     [:div.main
      {:class (when game-over? "game-over")}
 
@@ -124,7 +129,7 @@
 
      (when game-over?
        [:a.title
-        {:href "#"
+        {:href     "#"
          :on-click #(reset! world-atom
                             (new-block {:grid empty-grid}))}
         "GAME OVER"])]))
@@ -149,4 +154,4 @@
 
 (defn ^:export run []
   (r/render-component [main-component world-atom]
-                    (.getElementById js/document "container")))
+                      (.getElementById js/document "container")))
