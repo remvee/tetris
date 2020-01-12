@@ -3,22 +3,19 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.8.40"]
-                 [reagent "0.5.1"]]
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [org.clojure/clojurescript "1.10.597"]
+                 [reagent "0.8.1"]]
 
   :resource-paths ["resources"]
-  :profiles {:dev {:plugins [[lein-cljsbuild "1.1.3"]
-                             [lein-figwheel "0.5.3-2"]]
-                   :dependencies [[figwheel-sidecar "0.5.3-2"]
-                                  [com.cemerick/piggieback "0.2.1"]]
-                   :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
-                                  :init (do (use 'figwheel-sidecar.repl-api) (start-figwheel!))}}}
+  :profiles {:dev {:plugins [[lein-cljsbuild "1.1.7"]
+                             [lein-figwheel "0.5.19"]]
+                   :dependencies [[figwheel-sidecar "0.5.19"]]
+                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}}
 
   :figwheel {:css-dirs ["resources/public/css"]}
 
   :cljsbuild {:builds {:dev {:source-paths ["src"]
-                             :figwheel true
                              :compiler {:output-dir "resources/public/js-dev"
                                         :output-to "resources/public/js-dev/tetris.js"
                                         :optimizations :none}}
