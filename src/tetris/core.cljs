@@ -108,7 +108,7 @@
       new
       (assoc new :game-over? true))))
 
-(defn move [{:keys [game-over? marked] :as world} direction]
+(defn move [{:keys [start? game-over? marked] :as world} direction]
   (let [new (case direction
               :up    (update world :rotations inc)
               :down  (update world :y inc)
@@ -116,11 +116,11 @@
               :right (update world :x inc)
               world)]
     (cond
-      game-over?          world
-      marked              (clear world)
-      (valid? new)        new
-      (= direction :down) (-> world score new-block)
-      :else               world)))
+      (or start? game-over?) world
+      marked                 (clear world)
+      (valid? new)           new
+      (= direction :down)    (-> world score new-block)
+      :else                  world)))
 
 (defn grid-component [{:keys [marked] :as world}]
   (let [grid (render world)]
@@ -139,7 +139,7 @@
   (swap! world-atom move direction))
 
 (defn main-component [world-atom]
-  (let [{:keys [game-over? grid score]
+  (let [{:keys [start? game-over? grid score]
          :as   world} @world-atom
         button        (fn [dir]
                         (let [f #(do (move! world-atom dir)
@@ -149,9 +149,9 @@
                                     :on-touch-start f}
                            (name dir)]))]
     [:div.main
-     {:class (when game-over? "game-over")}
+     {:class (when (or start? game-over?) "paused")}
 
-     [:div.score (+ score)]
+     [:div.score (or score " ")]
      (grid-component world)
      [:div.controls
       (button :left)
@@ -159,14 +159,16 @@
       (button :up)
       (button :down)]
 
-     (when game-over?
+     (when (or start? game-over?)
        [:a.title
         {:href     "#"
          :on-click #(reset! world-atom
                             (new-block empty-world))}
-        "GAME OVER"])]))
+        (if start?
+          "START GAME"
+          "GAME OVER")])]))
 
-(defonce world-atom (r/atom (new-block empty-world)))
+(defonce world-atom (r/atom (-> empty-world (assoc :start? true))))
 
 (defn tick! []
   (move! world-atom :down)

@@ -43,13 +43,13 @@ html, body {
 .block-T { background: #aa5500; }
 .block-Z { background: #00aaaa; }
 
-.game-over {
+.paused {
     position: relative;
 }
-.game-over .grid {
+.paused .grid {
     opacity: 0.2;
 }
-.game-over .title {
+.paused .title {
     position: absolute;
     width: 100%;
     top: 33%;
