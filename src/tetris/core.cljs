@@ -60,26 +60,40 @@
                  block)
             (drop (+ y (count block)) grid))))
 
-(defn score [grid]
-  (reduce (fn [[n grid] grid-line]
-            (if (every? (partial not= \ ) grid-line)
-              [(inc n) (into [(take width (repeat \ ))] grid)]
-              [n (conj grid grid-line)]))
-          [0 []]
-          grid))
+(defn score [{:keys [grid] :as world}]
+  (let [grid (render world)]
+    (assoc world
+           :grid grid
+           :marked (->> grid
+                        (map vector (iterate inc 0))
+                        (reduce (fn [marked [i grid-line]]
+                                  (if (every? (partial not= \ ) grid-line)
+                                    (conj marked i)
+                                    marked))
+                                #{})))))
 
-(defn new-block [world]
-  (let [block        (rand-nth blocks)
-        x            (int (- (/ width 2) (/ (count (first block)) 2)))
-        [score grid] (-> world render score)
-        new          (-> world
-                         (assoc :grid grid, :x x, :y 0, :rotations 0, :block block)
-                         (update :score (fnil + 0) score))]
+(defn clear [{:keys [grid] :as world}]
+  (-> world
+      (assoc :grid (reduce (fn [grid grid-line]
+                             (if (every? (partial not= \ ) grid-line)
+                               (into [(take width (repeat \ ))] grid)
+                               (conj grid grid-line)))
+                           []
+                           grid))
+      (dissoc :marked)))
+
+(defn new-block [{:keys [marked] :as world}]
+  (let [block (rand-nth blocks)
+        x     (int (- (/ width 2) (/ (count (first block)) 2)))
+        grid  (-> world render)
+        new   (-> world
+                  (assoc :grid grid, :x x, :y 0, :rotations 0, :block block)
+                  (update :score + (count marked)))]
     (if (valid? new)
       new
       (assoc new :game-over? true))))
 
-(defn move [{:keys [game-over?] :as world} direction]
+(defn move [{:keys [game-over? marked] :as world} direction]
   (let [new (case direction
               :up    (update world :rotations inc)
               :down  (update world :y inc)
@@ -88,20 +102,23 @@
               world)]
     (cond
       game-over?          world
+      marked              (clear world)
       (valid? new)        new
-      (= direction :down) (new-block world)
+      (= direction :down) (-> world score new-block)
       :else               world)))
 
-(defn grid-component [grid]
-  [:div.grid
-   (for [[y line] (map vector (iterate inc 0) grid)]
-     [:div.line
-      {:key (str "line-" y)}
-      (for [[x cell] (map vector (iterate inc 0) line)]
-        [:div.cell
-         {:key   (str "cell-" x)
-          :class (when-not (= cell \ )
-                   (str "taken block-" cell))}])])])
+(defn grid-component [{:keys [marked] :as world}]
+  (let [grid (render world)]
+    [:div.grid
+     (for [[y line] (map vector (iterate inc 0) grid)]
+       [:div.line
+        {:key (str "line-" y)
+         :class (when (get marked y) "marked")}
+        (for [[x cell] (map vector (iterate inc 0) line)]
+          [:div.cell
+           {:key   (str "cell-" x)
+            :class (when-not (= cell \ )
+                     (str "taken block-" cell))}])])]))
 
 (defn move! [world-atom direction]
   (swap! world-atom move direction))
@@ -120,7 +137,7 @@
      {:class (when game-over? "game-over")}
 
      [:div.score (+ score)]
-     (grid-component (render world))
+     (grid-component world)
      [:div.controls
       (button :left)
       (button :right)

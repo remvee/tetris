@@ -21,6 +21,10 @@ html, body {
     overflow: hidden;
     box-sizing: border-box;
 }
+.line.marked .taken {
+    opacity: 0;
+    transition: opacity .5s
+}
 .cell {
     display: inline-block;
     width: 10%;
