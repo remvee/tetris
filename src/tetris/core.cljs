@@ -2,11 +2,17 @@
   (:require [reagent.core :as r]))
 
 (defonce initial-tick-frequency 500)
+(defonce min-tick-frequency 50)
+
 (defonce width 10)
 (defonce height 20)
 
 (defonce empty-grid
   (vec (take height (repeat (vec (take width (repeat \ )))))))
+
+(defonce empty-world
+  {:grid  empty-grid
+   :speed 0})
 
 (defonce blocks [["IIII"]
                  ["JJJ"
@@ -61,16 +67,18 @@
             (drop (+ y (count block)) grid))))
 
 (defn score [{:keys [grid] :as world}]
-  (let [grid (render world)]
-    (assoc world
-           :grid grid
-           :marked (->> grid
-                        (map vector (iterate inc 0))
-                        (reduce (fn [marked [i grid-line]]
-                                  (if (every? (partial not= \ ) grid-line)
-                                    (conj marked i)
-                                    marked))
-                                #{})))))
+  (let [grid   (render world)
+        marked (->> grid
+                    (map vector (iterate inc 0))
+                    (reduce (fn [marked [i grid-line]]
+                              (if (every? (partial not= \ ) grid-line)
+                                (conj marked i)
+                                marked))
+                            #{}))]
+    (-> world
+        (assoc :grid grid
+               :marked marked)
+        (update :speed + (if (empty? marked) 0 10)))))
 
 (defn clear [{:keys [grid] :as world}]
   (-> world
@@ -88,7 +96,10 @@
         grid  (-> world render)
         new   (-> world
                   (assoc :grid grid, :x x, :y 0, :rotations 0, :block block)
-                  (update :score + (count marked)))]
+                  (update :score + (* 100
+                                      (count marked)
+                                      (/ (count marked)
+                                         2))))]
     (if (valid? new)
       new
       (assoc new :game-over? true))))
@@ -148,10 +159,10 @@
        [:a.title
         {:href     "#"
          :on-click #(reset! world-atom
-                            (new-block {:grid empty-grid}))}
+                            (new-block empty-world))}
         "GAME OVER"])]))
 
-(defonce world-atom (r/atom (new-block {:grid empty-grid})))
+(defonce world-atom (r/atom (new-block empty-world)))
 
 (defonce key-listener
   (.addEventListener (.-body js/document) "keydown"
@@ -162,8 +173,9 @@
 
 (defn tick! []
   (move! world-atom :down)
-  (let [tick-frequency (- initial-tick-frequency
-                          (-> world-atom deref :score (* 10)))]
+  (let [tick-frequency (max (- initial-tick-frequency
+                               (-> world-atom deref :speed))
+                            min-tick-frequency)]
     (js/setTimeout tick! tick-frequency)))
 
 (defonce game-loop
