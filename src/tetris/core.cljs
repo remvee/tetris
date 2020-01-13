@@ -1,5 +1,9 @@
 (ns tetris.core
-  (:require [reagent.core :as r]))
+  (:require [goog.events :as events]
+            [goog.events.KeyCodes :as key-codes]
+            [goog.events.EventType :as event-type]
+            [reagent.core :as r]))
+
 
 (defonce initial-tick-frequency 500)
 (defonce min-tick-frequency 50)
@@ -173,11 +177,13 @@
 
 (defonce initialize
   (do
-    (.addEventListener (.-body js/document) "keydown"
-                       (fn [e]
-                         (when-let [direction ({37 :left, 38 :up, 39 :right, 40 :down}
-                                               (.-keyCode e))]
-                           (move! world-atom direction))))
+    (events/listen js/document event-type/KEYDOWN
+                   (fn [e]
+                     (when-let [direction ({key-codes/LEFT  :left
+                                            key-codes/UP    :up
+                                            key-codes/RIGHT :right
+                                            key-codes/DOWN  :down} (.-keyCode e))]
+                       (move! world-atom direction))))
     (tick!)
     true))
 
