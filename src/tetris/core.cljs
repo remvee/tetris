@@ -164,13 +164,6 @@
 
 (defonce world-atom (r/atom (new-block empty-world)))
 
-(defonce key-listener
-  (.addEventListener (.-body js/document) "keydown"
-                     (fn [e]
-                       (when-let [direction ({37 :left, 38 :up, 39 :right, 40 :down}
-                                             (.-keyCode e))]
-                         (move! world-atom direction)))))
-
 (defn tick! []
   (move! world-atom :down)
   (let [tick-frequency (max (- initial-tick-frequency
@@ -178,8 +171,15 @@
                             min-tick-frequency)]
     (js/setTimeout tick! tick-frequency)))
 
-(defonce game-loop
-  (tick!))
+(defonce initialize
+  (do
+    (.addEventListener (.-body js/document) "keydown"
+                       (fn [e]
+                         (when-let [direction ({37 :left, 38 :up, 39 :right, 40 :down}
+                                               (.-keyCode e))]
+                           (move! world-atom direction))))
+    (tick!)
+    true))
 
 (defn ^:export run []
   (r/render-component [main-component world-atom]
