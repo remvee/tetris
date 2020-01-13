@@ -2,6 +2,7 @@
   (:require [goog.events :as events]
             [goog.events.KeyCodes :as key-codes]
             [goog.events.EventType :as event-type]
+            [goog.storage.mechanism.HTML5LocalStorage :as HTML5LocalStorage]
             [reagent.core :as r]))
 
 
@@ -16,7 +17,8 @@
 
 (defonce empty-world
   {:grid  empty-grid
-   :speed 0})
+   :speed 0
+   :score 0})
 
 (defonce blocks [["IIII"]
                  ["JJJ"
@@ -31,6 +33,18 @@
                   " T "]
                  ["ZZ "
                   " ZZ"]])
+
+(defonce local-storage (goog.storage.mechanism.HTML5LocalStorage.))
+
+(defonce high-score-atom
+  (r/atom (if-let [v (.get local-storage "high-score")]
+            (js/parseInt v)
+            500)))
+
+(defonce high-score-watcher
+  (add-watch high-score-atom :local-storage
+             (fn [_ _ _ score]
+               (.set local-storage "high-score" (str score)))))
 
 (defn rotate [block rotations]
   (reduce (fn [block _]
@@ -94,16 +108,12 @@
                            grid))
       (dissoc :marked)))
 
-(defn new-block [{:keys [marked] :as world}]
+(defn new-block [{:keys [marked score] :as world}]
   (let [block (rand-nth blocks)
         x     (int (- (/ width 2) (/ (count (first block)) 2)))
         grid  (-> world render)
-        new   (-> world
-                  (assoc :grid grid, :x x, :y 0, :rotations 0, :block block)
-                  (update :score + (* 100
-                                      (count marked)
-                                      (/ (count marked)
-                                         2))))]
+        score (+ score (* 100 (count marked) (/ (count marked) 2)))
+        new   (assoc world :grid grid, :x x, :y 0, :rotations 0, :block block, :score score)]
     (if (valid? new)
       new
       (assoc new :game-over? true))))
@@ -127,7 +137,7 @@
     [:div.grid
      (for [[y line] (map vector (iterate inc 0) grid)]
        [:div.line
-        {:key (str "line-" y)
+        {:key   (str "line-" y)
          :class (when (get marked y) "marked")}
         (for [[x cell] (map vector (iterate inc 0) line)]
           [:div.cell
@@ -136,28 +146,38 @@
                      (str "taken block-" cell))}])])]))
 
 (defn move! [world-atom direction]
-  (swap! world-atom move direction))
+  (swap! world-atom move direction)
+  (let [high-score @high-score-atom
+        score      (:score @world-atom)]
+    (when (> score high-score)
+      (reset! high-score-atom (max @high-score-atom
+                                   (:score @world-atom))))))
 
 (defn main-component [world-atom]
-  (let [{:keys [start? game-over? grid score]
+  (let [high-score    @high-score-atom
+        {:keys [start? game-over? grid score]
          :as   world} @world-atom
         button        (fn [dir]
                         (let [f #(do (move! world-atom dir)
                                      (.preventDefault %))]
-                          [:button {:class (name dir)
-                                    :on-click f
-                                    :on-touch-start f}
+                          [:button {:class    (name dir)
+                                    :on-click f}
                            (name dir)]))]
-    [:div.main
-     {:class (when (or start? game-over?) "paused")}
+    [:div.main {:class (when (or start? game-over?) "paused")}
+     [:div.game {:class (when (>= score high-score) "have-high-score")}
 
-     [:div.score (or score " ")]
-     (grid-component world)
-     [:div.controls
-      (button :left)
-      (button :right)
-      (button :up)
-      (button :down)]
+      [:div.score.high-score
+       [:span.label "High Score:"] " " [:span.amount high-score]]
+      (grid-component world)
+      [:div.score.current-score
+       [:span.label "Score:"] " " [:span.amount score]]
+
+
+      [:div.controls
+       (button :left)
+       (button :right)
+       (button :up)
+       (button :down)]]
 
      (when (or start? game-over?)
        [:a.title
