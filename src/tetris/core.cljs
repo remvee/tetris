@@ -34,6 +34,10 @@
                  ["ZZ "
                   " ZZ"]])
 
+(defn new-world []
+  (assoc empty-world
+         :next-block (rand-nth blocks)))
+
 (defonce local-storage (goog.storage.mechanism.HTML5LocalStorage.))
 
 (defonce high-score-atom
@@ -108,12 +112,15 @@
                            grid))
       (dissoc :marked)))
 
-(defn new-block [{:keys [marked score] :as world}]
-  (let [block (rand-nth blocks)
+(defn new-block [{:keys [marked score next-block] :as world}]
+  (let [block next-block
         x     (int (- (/ width 2) (/ (count (first block)) 2)))
         grid  (-> world render)
         score (+ score (* 100 (count marked) (/ (count marked) 2)))
-        new   (assoc world :grid grid, :x x, :y 0, :rotations 0, :block block, :score score)]
+        new   (assoc world
+                     :grid grid
+                     :x x, :y 0, :rotations 0 :block block
+                     :next-block (rand-nth blocks), :score score)]
     (if (valid? new)
       new
       (assoc new :game-over? true))))
@@ -145,6 +152,17 @@
             :class (when-not (= cell \ )
                      (str "taken block-" cell))}])])]))
 
+(defn next-block-component [{:keys [next-block]}]
+  [:div.next-block
+   (for [[y line] (map vector (iterate inc 0) next-block)]
+     [:div.line
+      {:key   (str "line-" y)}
+      (for [[x cell] (map vector (iterate inc 0) line)]
+        [:div.cell
+         {:key   (str "cell-" x)
+          :class (when-not (= cell \ )
+                   (str "taken block-" cell))}])])])
+
 (defn move! [world-atom direction]
   (swap! world-atom move direction)
   (let [high-score @high-score-atom
@@ -157,21 +175,22 @@
   (let [high-score    @high-score-atom
         {:keys [start? game-over? grid score]
          :as   world} @world-atom
+        running?      (not (or start? game-over?))
         button        (fn [dir]
                         (let [f #(do (move! world-atom dir)
                                      (.preventDefault %))]
                           [:button {:class    (name dir)
                                     :on-click f}
                            (name dir)]))]
-    [:div.main {:class (when (or start? game-over?) "paused")}
+    [:div.main {:class (when-not running? "paused")}
      [:div.game {:class (when (>= score high-score) "have-high-score")}
 
       [:div.score.high-score
        [:span.label "High Score:"] " " [:span.amount high-score]]
       (grid-component world)
+      (when running? (next-block-component world))
       [:div.score.current-score
        [:span.label "Score:"] " " [:span.amount score]]
-
 
       [:div.controls
        (button :left)
@@ -179,19 +198,22 @@
        (button :up)
        (button :down)]]
 
-     (when (or start? game-over?)
+     (when-not running?
        [:a.title
         {:href     "#"
-         :on-click #(reset! world-atom
-                            (new-block empty-world))}
+         :on-click #(reset! world-atom (new-block (new-world)))}
         (if start?
           "START GAME"
           "GAME OVER")])]))
 
-(defonce world-atom (r/atom (-> empty-world (assoc :start? true))))
+(defonce world-atom (r/atom (assoc (new-world) :start? true)))
+(defonce paused-atom (atom false)) ;; note: normal atom, not reagent
+(defn toggle-pause! []
+  (swap! paused-atom not))
 
 (defn tick! []
-  (move! world-atom :down)
+  (when-not @paused-atom
+    (move! world-atom :down))
   (let [tick-frequency (max (- initial-tick-frequency
                                (-> world-atom deref :speed))
                             min-tick-frequency)]
@@ -201,6 +223,9 @@
   (do
     (events/listen js/document event-type/KEYDOWN
                    (fn [e]
+                     (when (= key-codes/P (.-keyCode e))
+                       (toggle-pause!))
+
                      (when-let [direction ({key-codes/LEFT  :left
                                             key-codes/UP    :up
                                             key-codes/RIGHT :right
